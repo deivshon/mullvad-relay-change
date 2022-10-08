@@ -2,7 +2,7 @@
 
 Wrapper utility script to sequentially select Mullvad servers/countries from a custom pool
 
-## Country and server
+## Country and server constraints
 
 Country and server constraints can be chosen with command line arguments
 
@@ -68,7 +68,7 @@ To facilitate the creation of custom pools, the script also features a listing f
     ae
     us
 
-Note that right now cities can not be included in the script constraints.
+Note that right now cities can not be included in the custom relay constraints
 
 Finally, to make sure the right countries and/or servers are being selected, you can use the `--verbose` argument to make the script show the available countries and servers after the filtering done using the selected constraints
 
