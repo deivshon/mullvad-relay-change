@@ -88,7 +88,13 @@ def handleConstraints(args, argsIndex, constraints, mainArgs):
 
     return i - 1
 
-mainArgs = ("--print", "--countries", "--servers", "--verbose")
+mainArgs = (
+    "--print",
+    "--countries",
+    "--servers",
+    "--verbose",
+    "--countries-as-servers"
+)
 
 countries, cities, servers = fetchServerData()
 
@@ -96,6 +102,7 @@ countryConstraints = []
 serverConstraints = []
 
 verbose = False
+countriesAsServers = False
 
 i = 1
 while i < len(sys.argv):
@@ -132,6 +139,8 @@ while i < len(sys.argv):
         i = handleConstraints(sys.argv, i + 1, serverConstraints, mainArgs)
     elif arg == "--verbose":
         verbose = True
+    elif arg == "--countries-as-servers":
+        countriesAsServers = True
     else:
         perror(f"Unrecognized argument: {arg}")
         sys.exit(1)
@@ -156,6 +165,10 @@ if serverConstraints != []:
         sys.exit(1)
 else: availableServers = []
 
+if countriesAsServers:
+    countryServers = list(filter(lambda s: countryFromServer(s) in availableCountries, servers))
+    availableServers += countryServers
+
 del countries
 del servers
 
@@ -179,5 +192,5 @@ if verbose:
     print(end = "\n")
     printList(availableCountries, "countries given the current constraints", " ")
     if(availableServers == []):
-        print("Available servers given the current constraints:\nAll servers in the available countries")
+        print("Available servers given the current constraints:\nAll servers in the available countries. No sequential switch")
     else: printList(availableServers, "servers given the current constraints", " ")

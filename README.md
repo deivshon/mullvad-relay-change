@@ -40,7 +40,33 @@ In this case, the final pool will only be composed of the following servers:
 
 Without any argument the default behaviour is selecting a pool full of all the available countries
 
-When only countries are specified, the Mullvad app automatically chooses a server from the country to which the location has been changed (as far as I know, this is random, but I could be wrong)
+When only countries are specified, the Mullvad app automatically chooses a server from the country to which the location has been changed (as far as I know, chosen randomly)
+
+To avoid this behaviour you can user the `--countries-as-servers` argument, which makes it so that selecting a country produces the equivalent result of selecting all the servers from said country. In practice, this means that you can, for instance, only have a country in your constraints but still sequentially switch from one server to the next, selecting the servers only from the ones in said country. Of course, the option is not limited in use to the case where you only have one country in the constraints. For example:
+
+    $ python3 mullvadRelayChange.py --countries it fi --verbose
+    Changing location to fi
+    Relay constraints updated
+
+    Available countries given the current constraints:
+    fi it
+    Available servers given the current constraints:
+    All servers in the available countries. No sequential switch
+
+... in this case, the script will sequentially switch the location from Italy to Finland and viceversa (if invoked with the same arguments, of course), but the server chosen within the country will be selected by the Mullvad app (again, probably randomly, and certainly not sequentially). If you wanted to sequentially switch from one server to the next from a pool of servers composed of the ones only located in these two countries, then you can use the `--countries-as-servers` option:
+
+    $ python3 mullvadRelayChange.py --countries it fi --countries-as-servers --verbose
+    Changing server to fi2-wireguard
+    Setting location constraint to fi2-wireguard in hel, fi
+    Relay constraints updated
+
+    Available countries given the current constraints:
+    fi it
+    Available servers given the current constraints:
+    fi-hel-001 fi-hel-002 fi-hel-003 fi-hel-004 fi-hel-005 fi-hel-006 fi-hel-007 fi1-wireguard fi2-wireguard fi3-wireguard it-mil-101 it-mil-102 it-mil-103 it-mil-104 it-mil-wg-001 it-mil-wg-002 it-mil-wg-003 it4-wireguard it5-wireguard it6-wireguard it7-wireguard
+
+... as you can see, the servers in the pool are still all of the ones in the selected countries, but the command given to Mullvad was to connect to a specific one, not to only change the relay location, thereby enabling sequential switching
+
 
 ## Other utilities
 
