@@ -6,10 +6,6 @@ import sys
 import json
 import os
 
-def countryFromServer(server):
-    firstToken = list(server.split("-")[0])
-    return "".join(c for c in firstToken if c not in "0123456789")
-
 def getCurrentRelayInfo():
     status = sp.run(["mullvad", "relay", "get"], capture_output = True)
     status = status.stdout.decode().lower().split(" ")
@@ -108,6 +104,26 @@ def getRelayFieldList(relayInfo, field, excludeBridges = True, excludeOffline = 
 
     return resultList
 
+def serverFits(relay, serverNames, countryConstraints, cityConstraints, serverConstraints):
+    if "country_code" not in relay.keys(): return False
+    if "city_code" not in relay.keys(): return False
+    if "hostname" not in relay.keys(): return False
+
+    country = relay["country_code"]
+    city = relay["city_code"]
+    hostname = relay["hostname"]
+
+    if hostname not in serverNames:
+        return False
+    if countryConstraints != [] and country not in countryConstraints:
+        return False
+    if cityConstraints != [] and city not in cityConstraints:
+        return False
+    if serverConstraints != [] and hostname not in serverConstraints:
+        return False
+    
+    return True
+
 relayInfo = loadRelayInfo("/tmp")
 if relayInfo == -1: sys.exit(1)
 
@@ -185,15 +201,18 @@ if countryConstraints != []:
 else: availableCountries = countries
 
 if serverConstraints != []:
-    availableServers = list(filter(lambda s: s in serverConstraints and countryFromServer(s) in availableCountries, servers))
+    availableServers = filter(lambda s: serverFits(s, servers, countryConstraints, cityConstraints, serverConstraints), relayInfo)
+    availableServers = list(map(lambda s: s["hostname"], availableServers))
     if availableServers == []:
         perror("No compatible and available servers amongst the ones specified")
         sys.exit(1)
 else: availableServers = []
 
 if countriesAsServers:
-    countryServers = list(filter(lambda s: countryFromServer(s) in availableCountries, servers))
-    availableServers += countryServers
+    countryServers = filter(lambda s: serverFits(s, servers, countryConstraints, [], []), relayInfo)
+    countryServers = map(lambda s: s["hostname"], countryServers)
+
+    availableServers += [s for s in countryServers if s not in availableServers]
 
 del countries
 del servers
