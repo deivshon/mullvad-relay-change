@@ -96,6 +96,20 @@ def getRelayInfo():
         perror("Could not get relay information from Mullvad API")
         return -1
 
+def saveRelayInfo(relayInfo, dirPath, fileName = "mullvadRelayInfo.json"):
+    if(not os.path.isdir(dirPath)):
+        perror(f"{dirPath} is not a valid directory")
+        return -1
+    
+    if(dirPath[len(dirPath) - 1] != "/"): dirPath += "/"
+    try:
+        with open(dirPath + fileName, "w") as f:
+            json.dump(relayInfo, f)
+        return 1
+    except:
+        perror(f"An error occurred while writing relay info to {dirPath + fileName}")
+        return -1
+
 mainArgs = (
     "--print",
     "--countries",
