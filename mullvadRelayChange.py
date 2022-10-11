@@ -6,23 +6,6 @@ import sys
 import json
 import os
 
-def parseCountry(countryLine):
-    if "(" not in countryLine: return ""
-
-    countryLine = countryLine[countryLine.index("(") + 1:len(countryLine) - 1]
-    return countryLine
-
-def parseCity(cityLine):
-    if not ("(" in cityLine and ")" in cityLine): return ""
-
-    cityLine = cityLine[cityLine.index("(") + 1:cityLine.index(")")]
-    return cityLine
-
-def parseServer(serverLine):
-    if("\t\t" not in serverLine): return ""
-    serverLine = serverLine[serverLine.index("\t\t") + 2: len(serverLine)]
-    return serverLine.split(" ")[0]
-
 def countryFromServer(server):
     firstToken = list(server.split("-")[0])
     return "".join(c for c in firstToken if c not in "0123456789")
