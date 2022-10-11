@@ -88,6 +88,14 @@ def handleConstraints(args, argsIndex, constraints, mainArgs):
 
     return i - 1
 
+def getRelayInfo():
+    try:
+        relayInfo = requests.get("https://api.mullvad.net/www/relays/all/", timeout = 10).json()
+        return relayInfo
+    except:
+        perror("Could not get relay information from Mullvad API")
+        return -1
+
 mainArgs = (
     "--print",
     "--countries",
