@@ -125,12 +125,14 @@ servers = getRelayFieldList(relayInfo, "hostname")
 mainArgs = (
     "--print",
     "--countries",
+    "--cities",
     "--servers",
     "--verbose",
     "--countries-as-servers"
 )
 
 countryConstraints = []
+cityConstraints = []
 serverConstraints = []
 
 verbose = False
@@ -157,18 +159,18 @@ while i < len(sys.argv):
         else:
             perror("Unrecognized option after --print\nAvailable options: countries, cities, servers")
             sys.exit(1)
-    elif arg == "--countries":
+    elif arg == "--countries" or arg == "--cities" or arg == "--servers":
         if len(sys.argv) <= i + 1:
-            perror("No option(s) after --countries")
+            perror(f"No option(s) after {arg}")
             sys.exit(1)
+        if arg == "--countries":
+            constraints = countryConstraints
+        elif arg == "--cities":
+            constraints = cityConstraints
+        else:
+            constraints = serverConstraints
 
-        i = handleConstraints(sys.argv, i + 1, countryConstraints, mainArgs)
-    elif arg == "--servers":
-        if len(sys.argv) <= i + 1:
-            perror("No option(s) after --servers")
-            sys.exit(1)
-
-        i = handleConstraints(sys.argv, i + 1, serverConstraints, mainArgs)
+        i = handleConstraints(sys.argv, i + 1, constraints, mainArgs)
     elif arg == "--verbose":
         verbose = True
     elif arg == "--countries-as-servers":
