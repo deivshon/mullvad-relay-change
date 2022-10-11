@@ -3,7 +3,6 @@
 import subprocess as sp
 from random import randint
 import sys
-import requests
 import json
 import os
 
@@ -27,31 +26,6 @@ def parseServer(serverLine):
 def countryFromServer(server):
     firstToken = list(server.split("-")[0])
     return "".join(c for c in firstToken if c not in "0123456789")
-
-def fetchServerData():
-    relays = sp.run(["mullvad", "relay", "list"], capture_output = True)
-    relays = relays.stdout.decode().splitlines()
-    countries = []
-    cities = []
-    servers = []
-    for i in range(0, len(relays)):
-        if(len(relays[i]) < 1): continue
-
-        fc = relays[i][0]
-        if(len(relays[i]) > 1): sc = relays[i][1]
-
-        if(fc != "\t"):
-            countries.append(parseCountry(relays[i]))
-        elif(len(relays[i]) < 2): continue
-        elif(fc == "\t" and sc != "\t"):
-            cities.append(parseCity(relays[i]))
-        elif(fc == "\t" and sc == "\t"):
-            servers.append(parseServer(relays[i]))
-    
-    countries = list(filter(lambda s: s != "", countries))
-    cities = list(filter(lambda s: s != "", cities))
-    servers = list(filter(lambda s: s != "", servers))
-    return countries, cities, servers
 
 def getCurrentCountry():
     status = sp.run(["mullvad", "relay", "get"], capture_output = True)
@@ -93,7 +67,11 @@ def handleConstraints(args, argsIndex, constraints, mainArgs):
 
 def getRelayInfo():
     try:
-        relayInfo = requests.get("https://api.mullvad.net/www/relays/all/", timeout = 10).json()
+        # Imported here as the import takes significantly more time than
+        # that of the other modules, and it only needs to be used occasionally
+        from requests import get as reqget
+
+        relayInfo = reqget("https://api.mullvad.net/www/relays/all/", timeout = 10).json()
         return relayInfo
     except:
         perror("Could not get relay information from Mullvad API")
@@ -113,6 +91,37 @@ def saveRelayInfo(relayInfo, dirPath, fileName = "mullvadRelayInfo.json"):
         perror(f"An error occurred while writing relay info to {dirPath + fileName}")
         return -1
 
+def loadRelayInfo(dirPath, fileName = "mullvadRelayInfo.json"):
+    if(dirPath[len(dirPath) - 1] != "/"): dirPath += "/"
+    if not os.path.isfile(dirPath + fileName):
+        relayInfo = getRelayInfo()
+        if relayInfo != -1: saveRelayInfo(relayInfo, dirPath, fileName)
+        return relayInfo
+
+    with open(dirPath + fileName) as f:
+        relayInfo = json.loads(f.read())
+
+    return relayInfo
+
+def getRelayFieldList(relayInfo, field, excludeBridges = True, excludeOffline = True):
+    resultList = []
+    for relay in relayInfo:
+        if excludeBridges and relay["type"] == "bridge": continue
+        if excludeOffline and relay["active"] == False: continue
+        if field not in relay.keys(): continue
+
+        if relay[field] not in resultList:
+            resultList.append(relay[field])
+
+    return resultList
+
+relayInfo = loadRelayInfo("/tmp")
+if relayInfo == -1: sys.exit(1)
+
+countries = getRelayFieldList(relayInfo, "country_code")
+cities = getRelayFieldList(relayInfo, "city_code")
+servers = getRelayFieldList(relayInfo, "hostname")
+
 mainArgs = (
     "--print",
     "--countries",
@@ -120,8 +129,6 @@ mainArgs = (
     "--verbose",
     "--countries-as-servers"
 )
-
-countries, cities, servers = fetchServerData()
 
 countryConstraints = []
 serverConstraints = []
