@@ -27,22 +27,32 @@ def countryFromServer(server):
     firstToken = list(server.split("-")[0])
     return "".join(c for c in firstToken if c not in "0123456789")
 
-def getCurrentCountry():
+def getCurrentRelayInfo():
     status = sp.run(["mullvad", "relay", "get"], capture_output = True)
     status = status.stdout.decode().lower().split(" ")
-    if "country" not in status: return "/"
-    if status.index("country") + 1 >= len(status): return "/"
 
-    return status[status.index("country") + 1]
+    country = ""
+    city = ""
+    server = ""
+    if "city" not in status and "country" not in status: return "", "", ""
+    elif "country" in status:
+        countryIndex = status.index("country") + 1
+        if(len(status) > countryIndex):
+            country = status[countryIndex].strip(",")
+    elif "city" in status:
+        cityIndex = status.index("city") + 1
+        countryIndex = status.index("city") + 2
+        if(len(status) > cityIndex):
+            city = status[cityIndex].strip(",")
+        if(len(status) > countryIndex):
+            country = status[countryIndex].strip(",")
 
-def getCurrentServer():
-    status = sp.run(["mullvad", "status"], capture_output = True)
-    status = status.stdout.decode().lower().split(" ")
+    if "hostname" in status:
+        serverIndex = status.index("hostname") + 1
+        if(len(status) > serverIndex):
+            server = status[serverIndex].strip(",")
 
-    if "connected" not in status: return "/"
-    if status.index("to") + 1 >= len(status): return "/"
-
-    return status[status.index("to") + 1]
+    return country, city, server
 
 def printList(list, label, endChar = "\n"):
     print(f"Available {label}:", end = "\n")
@@ -181,8 +191,7 @@ while i < len(sys.argv):
 
     i += 1
 
-currentCountry = getCurrentCountry()
-currentServer = getCurrentServer()
+currentCountry, currentCity, currentServer = getCurrentRelayInfo()
 newCountryIndex = -1
 
 if countryConstraints != []:
