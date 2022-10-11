@@ -3,6 +3,9 @@
 import subprocess as sp
 from random import randint
 import sys
+import requests
+import json
+import os
 
 def parseCountry(countryLine):
     if "(" not in countryLine: return ""
