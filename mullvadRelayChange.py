@@ -194,12 +194,14 @@ mainArgs = (
     "--servers",
     "--verbose",
     "--countries-as-servers",
-    "--cities-as-servers"
+    "--cities-as-servers",
+    "--tunnel-protocol"
 )
 
 countryConstraints = []
 cityConstraints = []
 serverConstraints = []
+tunnelProtocolConstraints = []
 
 verbose = False
 countriesAsServers = False
@@ -241,7 +243,8 @@ while i < len(sys.argv):
             cityConstraints = [(constraints[i], constraints[i +1])
                             for i in range(0, len(constraints), 2)
                             if i + 1 < len(constraints)]
-            
+    elif arg == "--tunnel-protocol":
+        i = handleConstraints(sys.argv, i + 1, tunnelProtocolConstraints, mainArgs)
     elif arg == "--verbose":
         verbose = True
     elif arg == "--countries-as-servers":
@@ -281,13 +284,11 @@ else: availableServers = []
 
 if countriesAsServers:
     countryServers = filter(lambda s: serverFits(s, servers, countryConstraints, [], []), relayInfo)
-    countryServers = map(lambda s: s["hostname"], countryServers)
 
     availableServers += [s for s in countryServers if s not in availableServers]
 
 if citiesAsServers:
     cityServers = filter(lambda s: serverFits(s, servers, countryConstraints, cityConstraints, []), relayInfo)
-    cityServers = map(lambda s: s["hostname"], cityServers)
 
     availableServers += [s for s in cityServers if s not in availableServers]
 
@@ -318,6 +319,17 @@ elif availableServers == [] and availableCities != []:
     print(f"Changing location to {newCountry}, {newCity}")
     sp.run(["mullvad", "relay", "set", "location", newCountry, newCity])
 else:
+    # Only filter here as the obtained info would not be used otherwise
+    if tunnelProtocolConstraints != []:
+        availableServers = list(filter(lambda s: "type" in s.keys() and
+                                       s["type"] in tunnelProtocolConstraints,
+                                       availableServers))
+        if availableServers == []:
+            perror("No matching relays found for given tunnel protocol constraints")
+            sys.exit(1)
+
+    availableServers = list(map(lambda s: s["hostname"], availableServers))
+
     if currentServer not in availableServers:
         newServerIndex = randint(0, len(availableServers) - 1)
     else:
