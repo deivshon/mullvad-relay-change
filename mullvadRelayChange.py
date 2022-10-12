@@ -203,7 +203,8 @@ mainArgs = (
     "--countries-as-servers",
     "--cities-as-servers",
     "--tunnel-protocol",
-    "--ownership"
+    "--ownership",
+    "--stboot"
 )
 
 countryConstraints = []
@@ -211,6 +212,7 @@ cityConstraints = []
 serverConstraints = []
 tunnelProtocol = "any"
 ownership = "any"
+stboot = "any"
 
 verbose = False
 countriesAsServers = False
@@ -261,6 +263,11 @@ while i < len(sys.argv):
         argCheck(sys.argv, i, ("any", "owned", "rented"))
 
         ownership = sys.argv[i + 1]
+        i += 1
+    elif arg == "--stboot":
+        argCheck(sys.argv, i, ("any", "true", "false"))
+
+        stboot = sys.argv[i + 1]
         i += 1
     elif arg == "--verbose":
         verbose = True
@@ -340,7 +347,11 @@ else:
     if tunnelProtocol != "any":
         availableServers = filterByField("type", lambda t: t in tunnelProtocol, availableServers, "tunnel protocol")
     if ownership != "any":
-        availableServers = filterByField("owned", lambda o: o == True if ownership == "owned" else o == False, availableServers, "ownership")
+        ownershipConstraint = True if ownership == "owned" else False
+        availableServers = filterByField("owned", lambda o: o == ownershipConstraint, availableServers, "ownership")
+    if stboot != "any":
+        stbootConstraint = True if stboot == "true" else False
+        availableServers = filterByField("stboot", lambda b: b == stbootConstraint, availableServers, "stboot")
     availableServers = list(map(lambda s: s["hostname"], availableServers))
 
     if currentServer not in availableServers:
@@ -363,4 +374,3 @@ if verbose:
         print("Available servers given the current constraints:\nAll servers in the available countries. No sequential switch")
     else:
         printList(availableServers, "servers given the current constraints", " ")
-        print(len(availableServers))
