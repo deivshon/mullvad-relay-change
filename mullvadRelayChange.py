@@ -209,7 +209,8 @@ mainArgs = (
     "--stboot",
     "--isp",
     "--isp-not",
-    "--min-bandwidth"
+    "--min-bandwidth",
+    "--random"
 )
 
 countryConstraints = []
@@ -225,6 +226,7 @@ minBandwidth = 0
 verbose = False
 countriesAsServers = False
 citiesAsServers = False
+randomChoice = False
 
 i = 1
 while i < len(sys.argv):
@@ -297,6 +299,8 @@ while i < len(sys.argv):
         countriesAsServers = True
     elif arg == "--cities-as-servers":
         citiesAsServers = True
+    elif arg == "--random":
+        randomChoice = True
     else:
         perror(f"Unrecognized argument: {arg}")
         sys.exit(1)
@@ -322,7 +326,7 @@ else: availableCities = []
 
 if serverConstraints != []:
     availableServers = filter(lambda s: serverFits(s, servers, countryConstraints, cityConstraints, serverConstraints), relayInfo)
-    availableServers = list(map(lambda s: s["hostname"], availableServers))
+
     if availableServers == []:
         perror("No compatible and available servers amongst the ones specified")
         sys.exit(1)
@@ -339,18 +343,26 @@ if citiesAsServers and cityConstraints != []:
     availableServers += [s for s in cityServers if s not in availableServers]
 
 if availableServers == [] and availableCities == []:
-    if currentCountry not in availableCountries:
+    if currentCountry not in availableCountries or randomChoice:
         newCountryIndex = randint(0, len(availableCountries) - 1)
     else:
         newCountryIndex = (availableCountries.index(currentCountry) + 1) % len(availableCountries)
 
+    if availableCountries[newCountryIndex] == currentCountry:
+        newCountryIndex += 1
+        newCountryIndex %= len(availableCountries)
+
     print(f"Changing location to {availableCountries[newCountryIndex]}")
     sp.run(["mullvad", "relay", "set", "location", availableCountries[newCountryIndex]])
 elif availableServers == [] and availableCities != []:
-    if currentCity not in availableCities:
+    if currentCity not in availableCities or randomChoice:
         newCityIndex = randint(0, len(availableCities) - 1)
     else:
         newCityIndex = (availableCities.index(currentCity) + 1) % len(availableCities)
+    
+    if availableCities[newCityIndex] == currentCity:
+        newCityIndex += 1
+        newCityIndex %= len(availableCities)
 
     cityCountry = availableCities[newCityIndex][0]
     if cityCountry == False:
@@ -384,10 +396,15 @@ else:
 
     availableServers = list(map(lambda s: s["hostname"], availableServers))
 
-    if currentServer not in availableServers:
+    if currentServer not in availableServers or randomChoice:
         newServerIndex = randint(0, len(availableServers) - 1)
     else:
         newServerIndex = (availableServers.index(currentServer) + 1) % len(availableServers)
+
+    if availableServers[newServerIndex] == currentServer:
+        newServerIndex += 1
+        newServerIndex %= len(availableServers)    
+
     print(f"Changing server to {availableServers[newServerIndex]}")
     sp.run(["mullvad", "relay", "set", "hostname", availableServers[newServerIndex]])
 
