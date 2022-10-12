@@ -202,13 +202,15 @@ mainArgs = (
     "--verbose",
     "--countries-as-servers",
     "--cities-as-servers",
-    "--tunnel-protocol"
+    "--tunnel-protocol",
+    "--ownership"
 )
 
 countryConstraints = []
 cityConstraints = []
 serverConstraints = []
 tunnelProtocol = "any"
+ownership = "any"
 
 verbose = False
 countriesAsServers = False
@@ -254,6 +256,11 @@ while i < len(sys.argv):
         argCheck(sys.argv, i, ("any", "wireguard", "openvpn"))
 
         tunnelProtocol = sys.argv[i + 1]
+        i += 1
+    elif arg == "--ownership":
+        argCheck(sys.argv, i, ("any", "owned", "rented"))
+
+        ownership = sys.argv[i + 1]
         i += 1
     elif arg == "--verbose":
         verbose = True
@@ -332,7 +339,8 @@ else:
     # Only filter here as the obtained info would not be used otherwise
     if tunnelProtocol != "any":
         availableServers = filterByField("type", lambda t: t in tunnelProtocol, availableServers, "tunnel protocol")
-
+    if ownership != "any":
+        availableServers = filterByField("owned", lambda o: o == True if ownership == "owned" else o == False, availableServers, "ownership")
     availableServers = list(map(lambda s: s["hostname"], availableServers))
 
     if currentServer not in availableServers:
@@ -355,3 +363,4 @@ if verbose:
         print("Available servers given the current constraints:\nAll servers in the available countries. No sequential switch")
     else:
         printList(availableServers, "servers given the current constraints", " ")
+        print(len(availableServers))
