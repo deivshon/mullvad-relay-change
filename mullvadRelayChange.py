@@ -166,7 +166,8 @@ mainArgs = (
     "--cities",
     "--servers",
     "--verbose",
-    "--countries-as-servers"
+    "--countries-as-servers",
+    "--cities-as-servers"
 )
 
 countryConstraints = []
@@ -175,6 +176,7 @@ serverConstraints = []
 
 verbose = False
 countriesAsServers = False
+citiesAsServers = False
 
 i = 1
 while i < len(sys.argv):
@@ -213,6 +215,8 @@ while i < len(sys.argv):
         verbose = True
     elif arg == "--countries-as-servers":
         countriesAsServers = True
+    elif arg == "--cities-as-servers":
+        citiesAsServers = True
     else:
         perror(f"Unrecognized argument: {arg}")
         sys.exit(1)
@@ -249,6 +253,12 @@ if countriesAsServers:
     countryServers = map(lambda s: s["hostname"], countryServers)
 
     availableServers += [s for s in countryServers if s not in availableServers]
+
+if citiesAsServers:
+    cityServers = filter(lambda s: serverFits(s, servers, countryConstraints, cityConstraints, []), relayInfo)
+    cityServers = map(lambda s: s["hostname"], cityServers)
+
+    availableServers += [s for s in cityServers if s not in availableServers]
 
 del countries
 del servers
