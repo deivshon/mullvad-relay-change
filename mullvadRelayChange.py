@@ -259,9 +259,9 @@ while i < len(sys.argv):
         if arg == "--cities":
             # City codes are not unique, therefore city arguments
             # must be expressed in the form of "country_code city_code"
-            cityConstraints = [(constraints[i], constraints[i +1])
-                            for i in range(0, len(constraints), 2)
-                            if i + 1 < len(constraints)]
+            cityConstraints = [(constraints[i], constraints[i + 1])
+                                for i in range(0, len(constraints), 2)
+                                if i + 1 < len(constraints)]
     elif arg == "--tunnel-protocol":
         argCheck(sys.argv, i, ("any", "wireguard", "openvpn"))
 
