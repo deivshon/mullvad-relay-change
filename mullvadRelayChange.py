@@ -170,12 +170,14 @@ def cityFits(city, relayInfo, countryConstraints, cityConstraints):
     
     return False
 
-def argCheck(argv, index, acceptedOptions):
+def argCheck(argv, index, acceptedOptions = None):
     if len(argv) <= index + 1:
-        perror(f"No option after {sys.argv[index]}\nAccepted options: {', '.join(acceptedOptions)}")
+        perror(f"No option after {sys.argv[index]}")
+        if acceptedOptions != None:
+            perror(f"Accepted options: {', '.join(acceptedOptions)}")
         sys.exit(1)
     
-    if argv[index + 1] not in acceptedOptions:
+    if acceptedOptions != None and argv[index + 1] not in acceptedOptions:
         perror(f"Unrecognized option after {sys.argv[index]}\nAccepted options: {', '.join(acceptedOptions)}")
         sys.exit(1)
 
@@ -206,7 +208,8 @@ mainArgs = (
     "--ownership",
     "--stboot",
     "--isp",
-    "--isp-not"
+    "--isp-not",
+    "--min-bandwidth"
 )
 
 countryConstraints = []
@@ -217,6 +220,7 @@ ispNegativeConstraints = []
 tunnelProtocol = "any"
 ownership = "any"
 stboot = "any"
+minBandwidth = 0
 
 verbose = False
 countriesAsServers = False
@@ -277,6 +281,16 @@ while i < len(sys.argv):
         i = handleConstraints(sys.argv, i + 1, ispConstraints, mainArgs)
     elif arg == "--isp-not":
         i = handleConstraints(sys.argv, i + 1, ispNegativeConstraints, mainArgs)
+    elif arg == "--min-bandwidth":
+        argCheck(sys.argv, i)
+
+        try:
+            minBandwidth = int(sys.argv[i + 1])
+        except:
+            perror("Invalid minimum bandwidth value provided")
+            sys.exit(1)
+        
+        i += 1
     elif arg == "--verbose":
         verbose = True
     elif arg == "--countries-as-servers":
@@ -368,6 +382,8 @@ else:
     if stboot != "any":
         stbootConstraint = True if stboot == "true" else False
         availableServers = filterByField("stboot", lambda b: b == stbootConstraint, availableServers, "stboot")
+    if minBandwidth != 0:
+        availableServers = filterByField("network_port_speed", lambda b: b >= minBandwidth, availableServers, "minimum bandwidth")
 
     availableServers = list(map(lambda s: s["hostname"], availableServers))
 
