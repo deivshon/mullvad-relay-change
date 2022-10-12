@@ -34,7 +34,8 @@ def getCurrentRelayInfo():
     return country, city, server
 
 def printList(list, label, endChar = "\n"):
-    print(f"Available {label}:", end = "\n")
+    if label != None:
+        print(f"Available {label}:", end = "\n")
     if(len(list) == 1):
         print(list[0])
         return
@@ -42,6 +43,16 @@ def printList(list, label, endChar = "\n"):
     for i in range(0, len(list) - 1):
         print(list[i], end = endChar)
     print(list[i + 1])
+
+def printTupleList(list, label, endChar = "\n"):
+    if label != None:
+        print(f"Available {label}:", end = "\n")
+    if(len(list) == 1):
+        printList(list[0], label = None, endChar = endChar)
+        return
+
+    for i in range(0, len(list)):
+        printList(list[i], label = None, endChar = endChar)
 
 def perror(errorMsg):
     print(errorMsg, file = sys.stderr)
@@ -104,6 +115,22 @@ def getRelayFieldList(relayInfo, field, excludeBridges = True, excludeOffline = 
 
     return resultList
 
+def getCities(relayInfo, excludeBridges = True, excludeOffline = True):
+    resultList = []
+    for relay in relayInfo:
+        if excludeBridges and relay["type"] == "bridge": continue
+        if excludeOffline and relay["active"] == False: continue
+        if "city_code" not in relay.keys(): continue
+        if "country_code" not in relay.keys(): continue
+
+        country = relay["country_code"]
+        city = relay["city_code"]
+
+        if (country, city) not in resultList:
+            resultList.append((country, city))
+
+    return resultList
+
 def serverFits(relay, serverNames, countryConstraints, cityConstraints, serverConstraints):
     if "country_code" not in relay.keys(): return False
     if "city_code" not in relay.keys(): return False
@@ -117,7 +144,7 @@ def serverFits(relay, serverNames, countryConstraints, cityConstraints, serverCo
         return False
     if countryConstraints != [] and country not in countryConstraints:
         return False
-    if cityConstraints != [] and city not in cityConstraints:
+    if cityConstraints != [] and (country, city) not in cityConstraints:
         return False
     if serverConstraints != [] and hostname not in serverConstraints:
         return False
@@ -125,31 +152,22 @@ def serverFits(relay, serverNames, countryConstraints, cityConstraints, serverCo
     return True
 
 def cityFits(city, relayInfo, countryConstraints, cityConstraints):
+    cityCountry = city[0]
+    cityProper = city[1]
     for relay in relayInfo:
         if "city_code" not in relay.keys(): continue
         if "country_code" not in relay.keys(): continue
 
         relayCity = relay["city_code"]
         relayCountry = relay["country_code"]
-
-        if relayCity != city: continue
+        if relayCity != cityProper or relayCountry != cityCountry: continue
 
         if countryConstraints != [] and relayCountry not in countryConstraints:
             return False
-        if cityConstraints != [] and relayCity not in cityConstraints:
+        if cityConstraints != [] and (relayCountry, relayCity) not in cityConstraints:
             return False
 
         return True
-    
-    return False
-
-def countryFromCity(city, relayInfo):
-    for relay in relayInfo:
-        if "city_code" not in relay.keys(): continue
-        if "country_code" not in relay.keys(): continue
-        if relay["city_code"] != city: continue
-
-        return relay["country_code"]
     
     return False
 
@@ -157,7 +175,7 @@ relayInfo = loadRelayInfo("/tmp")
 if relayInfo == -1: sys.exit(1)
 
 countries = getRelayFieldList(relayInfo, "country_code")
-cities = getRelayFieldList(relayInfo, "city_code")
+cities = getCities(relayInfo)
 servers = getRelayFieldList(relayInfo, "hostname")
 
 mainArgs = (
@@ -191,7 +209,7 @@ while i < len(sys.argv):
             printList(countries, "countries")
             quit()
         elif nextArg == "cities":
-            printList(cities, "cities")
+            printTupleList(cities, "cities", ", ")
             quit()
         elif nextArg == "servers":
             printList(servers, "servers")
@@ -211,6 +229,14 @@ while i < len(sys.argv):
             constraints = serverConstraints
 
         i = handleConstraints(sys.argv, i + 1, constraints, mainArgs)
+
+        if arg == "--cities":
+            # City codes are not unique, therefore city arguments
+            # must be expressed in the form of "country_code city_code"
+            cityConstraints = [(constraints[i], constraints[i +1])
+                            for i in range(0, len(constraints), 2)
+                            if i + 1 < len(constraints)]
+            
     elif arg == "--verbose":
         verbose = True
     elif arg == "--countries-as-servers":
@@ -277,13 +303,15 @@ elif availableServers == [] and availableCities != []:
     else:
         newCityIndex = (availableCities.index(currentCity) + 1) % len(availableCities)
     
-    cityCountry = countryFromCity(availableCities[newCityIndex], relayInfo)
+    cityCountry = availableCities[newCityIndex][0]
     if cityCountry == False:
         perror("Could not detect which country the city selected is located in")
         sys.exit(1)
 
-    print(f"Changing location to {availableCities[newCityIndex]}")
-    sp.run(["mullvad", "relay", "set", "location", cityCountry, availableCities[newCityIndex]])
+    newCountry = availableCities[newCityIndex][0]
+    newCity = availableCities[newCityIndex][1]
+    print(f"Changing location to {newCountry}, {newCity}")
+    sp.run(["mullvad", "relay", "set", "location", newCountry, newCity])
 else:
     if currentServer not in availableServers:
         newServerIndex = randint(0, len(availableServers) - 1)
@@ -299,7 +327,7 @@ if verbose:
     if availableCities == []:
         print("Available cities given the current constraints:\nAll cities in the available countries. No sequential switch")
     else:
-        printList(availableCities, "cities given the current constraints", " ")
+        printTupleList(availableCities, "cities given the current constraints", ", ")
 
     if availableServers == []:
         print("Available servers given the current constraints:\nAll servers in the available countries. No sequential switch")
