@@ -21,10 +21,9 @@ def getCurrentRelayInfo():
     elif "city" in status:
         cityIndex = status.index("city") + 1
         countryIndex = status.index("city") + 2
-        if(len(status) > cityIndex):
-            city = status[cityIndex].strip(",")
         if(len(status) > countryIndex):
             country = status[countryIndex].strip(",")
+            city = (country, status[cityIndex].strip(","))
 
     if "hostname" in status:
         serverIndex = status.index("hostname") + 1
@@ -308,7 +307,7 @@ elif availableServers == [] and availableCities != []:
         newCityIndex = randint(0, len(availableCities) - 1)
     else:
         newCityIndex = (availableCities.index(currentCity) + 1) % len(availableCities)
-    
+
     cityCountry = availableCities[newCityIndex][0]
     if cityCountry == False:
         perror("Could not detect which country the city selected is located in")
