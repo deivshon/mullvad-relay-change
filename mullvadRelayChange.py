@@ -204,12 +204,16 @@ mainArgs = (
     "--cities-as-servers",
     "--tunnel-protocol",
     "--ownership",
-    "--stboot"
+    "--stboot",
+    "--isp",
+    "--isp-not"
 )
 
 countryConstraints = []
 cityConstraints = []
 serverConstraints = []
+ispConstraints = []
+ispNegativeConstraints = []
 tunnelProtocol = "any"
 ownership = "any"
 stboot = "any"
@@ -269,6 +273,10 @@ while i < len(sys.argv):
 
         stboot = sys.argv[i + 1]
         i += 1
+    elif arg == "--isp":
+        i = handleConstraints(sys.argv, i + 1, ispConstraints, mainArgs)
+    elif arg == "--isp-not":
+        i = handleConstraints(sys.argv, i + 1, ispNegativeConstraints, mainArgs)
     elif arg == "--verbose":
         verbose = True
     elif arg == "--countries-as-servers":
@@ -311,7 +319,7 @@ if countriesAsServers:
 
     availableServers += [s for s in countryServers if s not in availableServers]
 
-if citiesAsServers:
+if citiesAsServers and cityConstraints != []:
     cityServers = filter(lambda s: serverFits(s, servers, countryConstraints, cityConstraints, []), relayInfo)
 
     availableServers += [s for s in cityServers if s not in availableServers]
@@ -344,6 +352,14 @@ elif availableServers == [] and availableCities != []:
     sp.run(["mullvad", "relay", "set", "location", newCountry, newCity])
 else:
     # Only filter here as the obtained info would not be used otherwise
+
+    if ispNegativeConstraints != []:
+        if ispConstraints == []: ispConstraints = getRelayFieldList(relayInfo, "provider")
+
+        ispConstraints = [p for p in ispConstraints if p not in ispNegativeConstraints]
+
+    if ispConstraints != []:
+        availableServers = filterByField("provider", lambda p: p in ispConstraints, availableServers, "isp")
     if tunnelProtocol != "any":
         availableServers = filterByField("type", lambda t: t == tunnelProtocol, availableServers, "tunnel protocol")
     if ownership != "any":
@@ -352,6 +368,7 @@ else:
     if stboot != "any":
         stbootConstraint = True if stboot == "true" else False
         availableServers = filterByField("stboot", lambda b: b == stbootConstraint, availableServers, "stboot")
+
     availableServers = list(map(lambda s: s["hostname"], availableServers))
 
     if currentServer not in availableServers:
