@@ -124,6 +124,35 @@ def serverFits(relay, serverNames, countryConstraints, cityConstraints, serverCo
     
     return True
 
+def cityFits(city, relayInfo, countryConstraints, cityConstraints):
+    for relay in relayInfo:
+        if "city_code" not in relay.keys(): continue
+        if "country_code" not in relay.keys(): continue
+
+        relayCity = relay["city_code"]
+        relayCountry = relay["country_code"]
+
+        if relayCity != city: continue
+
+        if countryConstraints != [] and relayCountry not in countryConstraints:
+            return False
+        if cityConstraints != [] and relayCity not in cityConstraints:
+            return False
+
+        return True
+    
+    return False
+
+def countryFromCity(city, relayInfo):
+    for relay in relayInfo:
+        if "city_code" not in relay.keys(): continue
+        if "country_code" not in relay.keys(): continue
+        if relay["city_code"] != city: continue
+
+        return relay["country_code"]
+    
+    return False
+
 relayInfo = loadRelayInfo("/tmp")
 if relayInfo == -1: sys.exit(1)
 
@@ -200,6 +229,13 @@ if countryConstraints != []:
         sys.exit(1)
 else: availableCountries = countries
 
+if cityConstraints != []:
+    availableCities = list(filter(lambda c: cityFits(c, relayInfo, countryConstraints, cityConstraints), cities))
+    if availableCities == []:
+        perror("No available cities amongst the ones specified")
+        sys.exit(1)
+else: availableCities = []
+
 if serverConstraints != []:
     availableServers = filter(lambda s: serverFits(s, servers, countryConstraints, cityConstraints, serverConstraints), relayInfo)
     availableServers = list(map(lambda s: s["hostname"], availableServers))
@@ -217,7 +253,7 @@ if countriesAsServers:
 del countries
 del servers
 
-if availableServers == []:
+if availableServers == [] and availableCities == []:
     if currentCountry not in availableCountries:
         newCountryIndex = randint(0, len(availableCountries) - 1)
     else:
@@ -225,6 +261,19 @@ if availableServers == []:
 
     print(f"Changing location to {availableCountries[newCountryIndex]}")
     sp.run(["mullvad", "relay", "set", "location", availableCountries[newCountryIndex]])
+elif availableServers == [] and availableCities != []:
+    if currentCity not in availableCities:
+        newCityIndex = randint(0, len(availableCities) - 1)
+    else:
+        newCityIndex = (availableCities.index(currentCity) + 1) % len(availableCities)
+    
+    cityCountry = countryFromCity(availableCities[newCityIndex], relayInfo)
+    if cityCountry == False:
+        perror("Could not detect which country the city selected is located in")
+        sys.exit(1)
+
+    print(f"Changing location to {availableCities[newCityIndex]}")
+    sp.run(["mullvad", "relay", "set", "location", cityCountry, availableCities[newCityIndex]])
 else:
     if currentServer not in availableServers:
         newServerIndex = randint(0, len(availableServers) - 1)
@@ -236,6 +285,13 @@ else:
 if verbose:
     print(end = "\n")
     printList(availableCountries, "countries given the current constraints", " ")
-    if(availableServers == []):
+
+    if availableCities == []:
+        print("Available cities given the current constraints:\nAll cities in the available countries. No sequential switch")
+    else:
+        printList(availableCities, "cities given the current constraints", " ")
+
+    if availableServers == []:
         print("Available servers given the current constraints:\nAll servers in the available countries. No sequential switch")
-    else: printList(availableServers, "servers given the current constraints", " ")
+    else:
+        printList(availableServers, "servers given the current constraints", " ")
