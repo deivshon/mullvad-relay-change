@@ -171,6 +171,16 @@ def cityFits(city, relayInfo, countryConstraints, cityConstraints):
     
     return False
 
+def argCheck(argv, index, acceptedOptions):
+    if len(argv) <= index + 1:
+        perror(f"No option after {sys.argv[index]}\nAccepted options: {', '.join(acceptedOptions)}")
+        sys.exit(1)
+    
+    if argv[index + 1] not in acceptedOptions:
+        perror(f"Unrecognized option after {sys.argv[index]}\nAccepted options: {', '.join(acceptedOptions)}")
+        sys.exit(1)
+
+
 relayInfo = loadRelayInfo("/tmp")
 if relayInfo == -1: sys.exit(1)
 
@@ -200,9 +210,7 @@ i = 1
 while i < len(sys.argv):
     arg = sys.argv[i]
     if arg == "--print":
-        if len(sys.argv) <= i + 1:
-            perror("No option after --print\nAvailable options: countries, cities, servers")
-            sys.exit(1)
+        argCheck(sys.argv, i, ("countries", "cities", "servers"))
 
         nextArg = sys.argv[i + 1]
         if nextArg == "countries":
@@ -214,9 +222,7 @@ while i < len(sys.argv):
         elif nextArg == "servers":
             printList(servers, "servers")
             quit()
-        else:
-            perror("Unrecognized option after --print\nAvailable options: countries, cities, servers")
-            sys.exit(1)
+
     elif arg == "--countries" or arg == "--cities" or arg == "--servers":
         if len(sys.argv) <= i + 1:
             perror(f"No option(s) after {arg}")
