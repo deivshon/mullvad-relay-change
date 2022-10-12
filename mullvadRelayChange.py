@@ -208,7 +208,7 @@ mainArgs = (
 countryConstraints = []
 cityConstraints = []
 serverConstraints = []
-tunnelProtocolConstraints = []
+tunnelProtocol = "any"
 
 verbose = False
 countriesAsServers = False
@@ -251,7 +251,10 @@ while i < len(sys.argv):
                             for i in range(0, len(constraints), 2)
                             if i + 1 < len(constraints)]
     elif arg == "--tunnel-protocol":
-        i = handleConstraints(sys.argv, i + 1, tunnelProtocolConstraints, mainArgs)
+        argCheck(sys.argv, i, ("any", "wireguard", "openvpn"))
+
+        tunnelProtocol = sys.argv[i + 1]
+        i += 1
     elif arg == "--verbose":
         verbose = True
     elif arg == "--countries-as-servers":
@@ -327,8 +330,8 @@ elif availableServers == [] and availableCities != []:
     sp.run(["mullvad", "relay", "set", "location", newCountry, newCity])
 else:
     # Only filter here as the obtained info would not be used otherwise
-    if tunnelProtocolConstraints != []:
-        availableServers = filterByField("type", lambda s: s in tunnelProtocolConstraints, availableServers, "tunnel protocol")
+    if tunnelProtocol != "any":
+        availableServers = filterByField("type", lambda t: t in tunnelProtocol, availableServers, "tunnel protocol")
 
     availableServers = list(map(lambda s: s["hostname"], availableServers))
 
