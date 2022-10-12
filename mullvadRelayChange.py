@@ -338,9 +338,6 @@ if citiesAsServers and cityConstraints != []:
 
     availableServers += [s for s in cityServers if s not in availableServers]
 
-del countries
-del servers
-
 if availableServers == [] and availableCities == []:
     if currentCountry not in availableCountries:
         newCountryIndex = randint(0, len(availableCountries) - 1)
