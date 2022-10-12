@@ -345,7 +345,7 @@ elif availableServers == [] and availableCities != []:
 else:
     # Only filter here as the obtained info would not be used otherwise
     if tunnelProtocol != "any":
-        availableServers = filterByField("type", lambda t: t in tunnelProtocol, availableServers, "tunnel protocol")
+        availableServers = filterByField("type", lambda t: t == tunnelProtocol, availableServers, "tunnel protocol")
     if ownership != "any":
         ownershipConstraint = True if ownership == "owned" else False
         availableServers = filterByField("owned", lambda o: o == ownershipConstraint, availableServers, "ownership")
