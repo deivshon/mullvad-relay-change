@@ -179,12 +179,8 @@ def argCheck(argv, index, acceptedOptions):
         perror(f"Unrecognized option after {sys.argv[index]}\nAccepted options: {', '.join(acceptedOptions)}")
         sys.exit(1)
 
-def filterByField(field, acceptedValues, servers, constraintName):
-    if acceptedValues == []: return servers
-
-    servers = list(filter(lambda s: field in s.keys() and
-                                       s[field] in acceptedValues,
-                                       servers))
+def filterByField(field, validityFunction, servers, constraintName):
+    servers = list(filter(lambda s: field in s.keys() and validityFunction(s[field]), servers))
     if servers == []:
         perror(f"No matching relays found for given {constraintName} constraints")
         sys.exit(1)
@@ -331,7 +327,8 @@ elif availableServers == [] and availableCities != []:
     sp.run(["mullvad", "relay", "set", "location", newCountry, newCity])
 else:
     # Only filter here as the obtained info would not be used otherwise
-    availableServers = filterByField("type", tunnelProtocolConstraints, availableServers, "tunnel protocol")
+    if tunnelProtocolConstraints != []:
+        availableServers = filterByField("type", lambda s: s in tunnelProtocolConstraints, availableServers, "tunnel protocol")
 
     availableServers = list(map(lambda s: s["hostname"], availableServers))
 
