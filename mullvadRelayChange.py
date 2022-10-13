@@ -156,26 +156,6 @@ def serverFits(relay, serverNames, countryConstraints, cityConstraints, serverCo
     
     return True
 
-def cityFits(city, relayInfo, countryConstraints, cityConstraints):
-    cityCountry = city[0]
-    cityProper = city[1]
-    for relay in relayInfo:
-        if "city_code" not in relay.keys(): continue
-        if "country_code" not in relay.keys(): continue
-
-        relayCity = relay["city_code"]
-        relayCountry = relay["country_code"]
-        if relayCity != cityProper or relayCountry != cityCountry: continue
-
-        if countryConstraints != [] and relayCountry not in countryConstraints:
-            return False
-        if cityConstraints != [] and (relayCountry, relayCity) not in cityConstraints:
-            return False
-
-        return True
-    
-    return False
-
 def argCheck(argv, index, acceptedOptions = None):
     if len(argv) <= index + 1:
         perror(f"No option after {sys.argv[index]}")
@@ -353,6 +333,10 @@ while i < len(sys.argv):
 
 currentCountry, currentCity, currentServer = getCurrentRelayInfo()
 newCountryIndex = -1
+countryCheck = lambda r: "country_code" in r.keys() and r["country_code"] in countryConstraints and r["country_code"] in countries
+cityCheck = lambda r: "country_code" in r.keys() and "city_code" in r.keys() and (r["country_code"], r["city_code"]) in cityConstraints and (r["country_code"], r["city_code"]) in cities
+serverCheck = lambda r: "hostname" in r.keys() and r["hostname"] in serverConstraints
+retTrue = lambda a: True
 
 if countryConstraints != []:
     availableCountries = list(filter(lambda c: c in countryConstraints, countries))
@@ -362,14 +346,14 @@ if countryConstraints != []:
 else: availableCountries = countries
 
 if cityConstraints != []:
-    availableCities = list(filter(lambda c: cityFits(c, relayInfo, countryConstraints, cityConstraints), cities))
+    availableCities = filterRelayEntityList(cities, relayInfo, ["country_code", "city_code", "hostname"], lambda r: (r["country_code"], r["city_code"]), countryCheck if countryConstraints != [] else retTrue, cityCheck if cityConstraints != [] else retTrue, lambda r: r["hostname"] in servers)
     if availableCities == []:
         perror("No available cities amongst the ones specified")
         sys.exit(1)
 else: availableCities = []
 
 if serverConstraints != []:
-    availableServers = filter(lambda s: serverFits(s, servers, countryConstraints, cityConstraints, serverConstraints), relayInfo)
+    availableServers = filterRelayEntityList(relayInfo, relayInfo, ["hostname"], lambda r: r, countryCheck if countryConstraints != [] else retTrue, cityCheck if cityConstraints != [] else retTrue, serverCheck if serverConstraints != [] else retTrue, lambda r: r["hostname"] in servers)
 
     if availableServers == []:
         perror("No compatible and available servers amongst the ones specified")
@@ -377,12 +361,12 @@ if serverConstraints != []:
 else: availableServers = []
 
 if countriesAsServers:
-    countryServers = filter(lambda s: serverFits(s, servers, countryConstraints, [], []), relayInfo)
+    countryServers = filterRelayEntityList(relayInfo, relayInfo, ["country_code", "hostname"], lambda r: r, countryCheck if countryConstraints != [] else retTrue, serverCheck if serverConstraints != [] else retTrue, lambda r: r["hostname"] in servers)
 
     availableServers += [s for s in countryServers if s not in availableServers]
 
 if citiesAsServers and cityConstraints != []:
-    cityServers = filter(lambda s: serverFits(s, servers, countryConstraints, cityConstraints, []), relayInfo)
+    cityServers = filterRelayEntityList(relayInfo, relayInfo, ["country_code", "city_code", "hostname"], lambda r: r, cityCheck, countryCheck if countryConstraints != [] else retTrue, lambda r: r["hostname"] in servers)
 
     availableServers += [s for s in cityServers if s not in availableServers]
 
