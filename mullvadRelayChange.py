@@ -210,7 +210,9 @@ mainArgs = (
     "--isp",
     "--isp-not",
     "--min-bandwidth",
-    "--random"
+    "--random",
+    "--pick-country",
+    "--pick-city"
 )
 
 countryConstraints = []
@@ -227,6 +229,9 @@ verbose = False
 countriesAsServers = False
 citiesAsServers = False
 randomChoice = False
+
+pickCountry = False
+pickCity = False
 
 i = 1
 while i < len(sys.argv):
@@ -301,6 +306,10 @@ while i < len(sys.argv):
         citiesAsServers = True
     elif arg == "--random":
         randomChoice = True
+    elif arg == "--pick-country":
+        pickCountry = True
+    elif arg == "--pick-city":
+        pickCity = True
     else:
         perror(f"Unrecognized argument: {arg}")
         sys.exit(1)
@@ -342,6 +351,8 @@ if citiesAsServers and cityConstraints != []:
 
     availableServers += [s for s in cityServers if s not in availableServers]
 
+implicitServerPick = False
+
 if availableServers == [] and availableCities == []:
     if currentCountry not in availableCountries or randomChoice:
         newCountryIndex = randint(0, len(availableCountries) - 1)
@@ -353,7 +364,16 @@ if availableServers == [] and availableCities == []:
         newCountryIndex %= len(availableCountries)
 
     print(f"Changing location to {availableCountries[newCountryIndex]}")
-    sp.run(["mullvad", "relay", "set", "location", availableCountries[newCountryIndex]])
+    if pickCountry:
+        sp.run(["mullvad", "disconnect", "--wait"])
+        sp.run(["mullvad", "relay", "set", "location", availableCountries[newCountryIndex]])
+        sp.run(["mullvad", "connect", "--wait"])
+    else:
+        availableServers = filter(lambda s: serverFits(s, servers, [availableCountries[newCountryIndex]], [], []), relayInfo)
+        sp.run(["mullvad", "disconnect", "--wait"])
+        sp.run(["mullvad", "relay", "set", "location", availableCountries[newCountryIndex]])
+        implicitServerPick = True
+
 elif availableServers == [] and availableCities != []:
     if currentCity not in availableCities or randomChoice:
         newCityIndex = randint(0, len(availableCities) - 1)
@@ -372,8 +392,17 @@ elif availableServers == [] and availableCities != []:
     newCountry = availableCities[newCityIndex][0]
     newCity = availableCities[newCityIndex][1]
     print(f"Changing location to {newCountry}, {newCity}")
-    sp.run(["mullvad", "relay", "set", "location", newCountry, newCity])
-else:
+    if pickCity:
+        sp.run(["mullvad", "disconnect", "--wait"])
+        sp.run(["mullvad", "relay", "set", "location", newCountry, newCity])
+        sp.run(["mullvad", "connect", "--wait"])
+    else:
+        availableServers = filter(lambda s: serverFits(s, servers, [], [availableCities[newCityIndex]], []), relayInfo)
+        sp.run(["mullvad", "disconnect", "--wait"])
+        sp.run(["mullvad", "relay", "set", "location", newCountry, newCity])
+        implicitServerPick = True
+
+if availableServers != []:
     # Only filter here as the obtained info would not be used otherwise
 
     if ispNegativeConstraints != []:
@@ -407,6 +436,7 @@ else:
 
     print(f"Changing server to {availableServers[newServerIndex]}")
     sp.run(["mullvad", "relay", "set", "hostname", availableServers[newServerIndex]])
+    sp.run(["mullvad", "connect", "--wait"])
 
 if verbose:
     print(end = "\n")
@@ -419,5 +449,7 @@ if verbose:
 
     if availableServers == []:
         print("Available servers given the current constraints:\nAll servers in the available countries. No sequential switch")
+    elif implicitServerPick:
+        print("Available servers given the current constraints:\nAll servers in the available countries, within specified constraints. No sequential switch")
     else:
         printList(availableServers, "servers given the current constraints", " ")
