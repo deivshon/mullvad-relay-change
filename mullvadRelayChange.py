@@ -6,6 +6,12 @@ import sys
 import json
 import os
 
+def mullvadConnect():
+    sp.run(["mullvad", "connect", "--wait"])
+
+def mullvadDisconnect():
+    sp.run(["mullvad", "disconnect", "--wait"])
+
 def getCurrentRelayInfo():
     status = sp.run(["mullvad", "relay", "get"], capture_output = True)
     status = status.stdout.decode().lower().split(" ")
@@ -396,12 +402,12 @@ if availableServers == [] and availableCities == []:
 
     print(f"Changing location to {availableCountries[newCountryIndex]}")
     if pickCountry:
-        sp.run(["mullvad", "disconnect", "--wait"])
+        mullvadDisconnect()
         sp.run(["mullvad", "relay", "set", "location", availableCountries[newCountryIndex]])
-        sp.run(["mullvad", "connect", "--wait"])
+        mullvadConnect()
     else:
         availableServers = filter(lambda s: serverFits(s, servers, [availableCountries[newCountryIndex]], [], []), relayInfo)
-        sp.run(["mullvad", "disconnect", "--wait"])
+        mullvadDisconnect()
         sp.run(["mullvad", "relay", "set", "location", availableCountries[newCountryIndex]])
         implicitServerPick = True
 
@@ -426,12 +432,12 @@ elif availableServers == [] and availableCities != []:
     newCity = availableCities[newCityIndex][1]
     print(f"Changing location to {newCountry}, {newCity}")
     if pickCity:
-        sp.run(["mullvad", "disconnect", "--wait"])
+        mullvadDisconnect()
         sp.run(["mullvad", "relay", "set", "location", newCountry, newCity])
-        sp.run(["mullvad", "connect", "--wait"])
+        mullvadConnect()
     else:
         availableServers = filter(lambda s: serverFits(s, servers, [], [availableCities[newCityIndex]], []), relayInfo)
-        sp.run(["mullvad", "disconnect", "--wait"])
+        mullvadDisconnect()
         sp.run(["mullvad", "relay", "set", "location", newCountry, newCity])
         implicitServerPick = True
 
@@ -450,7 +456,7 @@ if availableServers != []:
 
     print(f"Changing server to {availableServers[newServerIndex]}")
     sp.run(["mullvad", "relay", "set", "hostname", availableServers[newServerIndex]])
-    sp.run(["mullvad", "connect", "--wait"])
+    mullvadConnect()
 
 if verbose:
     print(end = "\n")
