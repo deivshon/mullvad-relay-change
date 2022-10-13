@@ -325,7 +325,7 @@ while i < len(sys.argv):
         except:
             perror("Invalid minimum bandwidth value provided")
             sys.exit(1)
-        
+
         i += 1
     elif arg == "--verbose":
         verbose = True
