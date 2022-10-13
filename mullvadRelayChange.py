@@ -181,14 +181,6 @@ def argCheck(argv, index, acceptedOptions = None):
         perror(f"Unrecognized option after {sys.argv[index]}\nAccepted options: {', '.join(acceptedOptions)}")
         sys.exit(1)
 
-def filterByField(field, validityFunction, servers, constraintName):
-    servers = list(filter(lambda s: field in s.keys() and validityFunction(s[field]), servers))
-    if servers == []:
-        perror(f"No matching relays found for given {constraintName} constraints")
-        sys.exit(1)
-
-    return servers
-
 def filterRelayEntityList(unfilteredEntityList, relayInfo, necessaryFields, entityGet, *args):
     newEntityList = []
     for relay in relayInfo:
