@@ -189,6 +189,32 @@ def filterByField(field, validityFunction, servers, constraintName):
 
     return servers
 
+def filterRelayEntityList(unfilteredEntityList, relayInfo, necessaryFields, entityGet, *args):
+    newEntityList = []
+    for relay in relayInfo:
+        invalid = False
+
+        for f in necessaryFields:
+            if f not in relay.keys():
+                invalid = True
+                break
+        if invalid: continue
+
+        relayEntity = entityGet(relay)
+
+        if relayEntity not in unfilteredEntityList: continue
+        if relayEntity in newEntityList: continue
+        for validityFunction in args:
+            if not validityFunction(relay):
+                invalid = True
+                break
+
+        if invalid: continue
+
+        newEntityList.append(relayEntity)
+
+    return newEntityList
+
 relayInfo = loadRelayInfo("/tmp")
 if relayInfo == -1: sys.exit(1)
 
@@ -218,12 +244,23 @@ mainArgs = (
 countryConstraints = []
 cityConstraints = []
 serverConstraints = []
+
 ispConstraints = []
 ispNegativeConstraints = []
+ispCheck = lambda r: "provider" in r.keys() and (True if ispConstraints == [] else r["provider"] in ispConstraints)
+ispNegativeCheck = lambda r: "provider" in r.keys() and (True if ispNegativeCheck == [] else r["provider"] not in ispNegativeConstraints)
+
 tunnelProtocol = "any"
+tunnelProtocolCheck = lambda r: "type" in r.keys() and (True if tunnelProtocol == "any" else r["type"] == tunnelProtocol)
+
 ownership = "any"
+ownershipCheck = lambda r: "owned" in r.keys() and (True if ownership == "any" else (r["owned"] == True if ownership == "owned" else r["owned"] == False))
+
 stboot = "any"
+stbootCheck = lambda r: "stboot" in r.keys() and (True if stboot == "any" else (r["stboot"] == True if stboot == "true" else r["stboot"] == False))
+
 minBandwidth = 0
+minBandwidthCheck = lambda r: "network_port_speed" in r.keys() and r["network_port_speed"] >= minBandwidth
 
 verbose = False
 countriesAsServers = False
@@ -354,6 +391,8 @@ if citiesAsServers and cityConstraints != []:
 implicitServerPick = False
 
 if availableServers == [] and availableCities == []:
+    availableCountries = filterRelayEntityList(availableCountries, relayInfo, ["country_code"], lambda r: r["country_code"], ispCheck, ispNegativeCheck, tunnelProtocolCheck, ownershipCheck, stbootCheck, minBandwidthCheck)
+
     if currentCountry not in availableCountries or randomChoice:
         newCountryIndex = randint(0, len(availableCountries) - 1)
     else:
@@ -375,6 +414,8 @@ if availableServers == [] and availableCities == []:
         implicitServerPick = True
 
 elif availableServers == [] and availableCities != []:
+    availableCities = filterRelayEntityList(availableCities, relayInfo, ["country_code", "city_code"], lambda r: (r["country_code"], r["city_code"]), ispCheck, ispNegativeCheck, tunnelProtocolCheck, ownershipCheck, stbootCheck, minBandwidthCheck)
+
     if currentCity not in availableCities or randomChoice:
         newCityIndex = randint(0, len(availableCities) - 1)
     else:
@@ -403,27 +444,8 @@ elif availableServers == [] and availableCities != []:
         implicitServerPick = True
 
 if availableServers != []:
-    # Only filter here as the obtained info would not be used otherwise
-
-    if ispNegativeConstraints != []:
-        if ispConstraints == []: ispConstraints = getRelayFieldList(relayInfo, "provider")
-
-        ispConstraints = [p for p in ispConstraints if p not in ispNegativeConstraints]
-
-    if ispConstraints != []:
-        availableServers = filterByField("provider", lambda p: p in ispConstraints, availableServers, "isp")
-    if tunnelProtocol != "any":
-        availableServers = filterByField("type", lambda t: t == tunnelProtocol, availableServers, "tunnel protocol")
-    if ownership != "any":
-        ownershipConstraint = True if ownership == "owned" else False
-        availableServers = filterByField("owned", lambda o: o == ownershipConstraint, availableServers, "ownership")
-    if stboot != "any":
-        stbootConstraint = True if stboot == "true" else False
-        availableServers = filterByField("stboot", lambda b: b == stbootConstraint, availableServers, "stboot")
-    if minBandwidth != 0:
-        availableServers = filterByField("network_port_speed", lambda b: b >= minBandwidth, availableServers, "minimum bandwidth")
-
-    availableServers = list(map(lambda s: s["hostname"], availableServers))
+    availableServerNames = list(map(lambda r: r["hostname"], (availableServers)))
+    availableServers = filterRelayEntityList(availableServerNames, relayInfo, ["hostname"], lambda r: r["hostname"], ispCheck, ispNegativeCheck, tunnelProtocolCheck, ownershipCheck, stbootCheck, minBandwidthCheck)
 
     if currentServer not in availableServers or randomChoice:
         newServerIndex = randint(0, len(availableServers) - 1)
