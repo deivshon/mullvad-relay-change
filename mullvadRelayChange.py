@@ -336,7 +336,7 @@ while i < len(sys.argv):
 
 currentCountry, currentCity, currentServer = getCurrentRelayInfo()
 
-retTrue = lambda a: True
+retTrue = lambda *_: True
 
 countryCheck = lambda r: "country_code" in r.keys() and r["country_code"] in countryConstraints and r["country_code"] in countries
 if countryConstraints == []: countryCheck = retTrue
