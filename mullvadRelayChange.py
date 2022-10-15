@@ -196,6 +196,9 @@ def filterRelayEntityList(unfilteredEntityList, relayInfo, necessaryFields, enti
 relayInfo = loadRelayInfo("/tmp")
 if relayInfo == -1: sys.exit(1)
 
+# Remove bridges
+relayInfo = list(filter(lambda r: "type" in r.keys() and r["type"] != "bridge", relayInfo))
+
 countries = getRelayFieldList(relayInfo, "country_code")
 cities = getCities(relayInfo)
 servers = getRelayFieldList(relayInfo, "hostname")
